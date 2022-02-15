@@ -6,6 +6,8 @@ import com.itforshort.blog_spring_angular_postgre.repository.PostRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -28,10 +30,21 @@ public class PostController {
     public ResponseEntity<Map<String, Object>> getAllPosts(
             @RequestParam(required = false) String title,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "3") int size
+            @RequestParam(defaultValue = "3") int size,
+            @RequestParam(defaultValue = "id") String sort_by,
+            @RequestParam(defaultValue = "desc") String sort_type
     ) {
         try {
-            Pageable paging = PageRequest.of(page - 1, size);
+//            List<Order> orders = new ArrayList<Order>();
+//            if (sort[0].contains(",")) {
+//                for (String sortOrder : sort) {
+//                    String[] _sort = sortOrder.split(",");
+//                    orders.add(new Order(getSortDirection(_sort[1]), _sort[0]));
+//                }
+//            } else {
+//                orders.add(new Order(getSortDirection(sort[1]), sort[0]));
+//            }
+            Pageable paging = PageRequest.of(page - 1, size, getSortDirection(sort_by, sort_type));
             Page<Post> pagePosts;
             if (title == null) {
                 pagePosts = postRepository.findAll(paging);
@@ -122,6 +135,15 @@ public class PostController {
         if (posts.isEmpty())
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    private Sort getSortDirection(String sort_by, String sort_type) {
+        if (sort_type.equals("asc")) {
+            return Sort.by(sort_by).ascending();
+        } else if (sort_type.equals("desc")) {
+            return Sort.by(sort_by).descending();
+        }
+        return Sort.by(sort_by).ascending();
     }
 
 }
