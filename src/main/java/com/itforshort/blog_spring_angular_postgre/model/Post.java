@@ -38,6 +38,10 @@ public class Post {
 
     public Post() {}
 
+    public long getId() {
+        return id;
+    }
+
     public String getTitle() {
         return title;
     }

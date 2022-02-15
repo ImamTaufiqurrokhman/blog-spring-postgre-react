@@ -3,13 +3,14 @@ package com.itforshort.blog_spring_angular_postgre.controller;
 import com.itforshort.blog_spring_angular_postgre.model.Post;
 import com.itforshort.blog_spring_angular_postgre.repository.PostRepository;
 //import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 //import static javax.swing.text.html.parser.DTDConstants.ID;
 
@@ -17,9 +18,6 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api")
 public class PostController {
-//    @Autowired
-//    PostRepository postRepository;
-
     private final PostRepository postRepository;
 
     public PostController(PostRepository postRepository) {
@@ -27,17 +25,19 @@ public class PostController {
     }
 
     @GetMapping("/posts")
-    public ResponseEntity<List<Post>> getAllPosts(@RequestParam(required = false) String title) {
+    public ResponseEntity<Map<String, Object>> getAllPosts(
+            @RequestParam(required = false) String title,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "3") int size
+    ) {
         try {
-            List<Post> posts = new ArrayList<>();
-            if (title == null)
-                posts.addAll(postRepository.findAll());
-            else
-//                postRepository.findByTitleContaining(title).forEach(posts::add);
-                posts.addAll(postRepository.findByTitleContaining(title));
-            if (posts.isEmpty())
-                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-            return new ResponseEntity<>(posts, HttpStatus.OK);
+            Pageable paging = PageRequest.of(page - 1, size);
+            Page<Post> pagePosts;
+            if (title == null) {
+                pagePosts = postRepository.findAll(paging);
+            } else
+                pagePosts = postRepository.findByTitleContaining(title, paging);
+            return getMapResponseEntity(pagePosts);
         } catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -46,12 +46,6 @@ public class PostController {
     @GetMapping("/posts/{id}")
     public ResponseEntity<Post> getPostById(@PathVariable("id") long id) {
         Optional<Post> postData = postRepository.findById(id);
-//        if (postData.isPresent()) {
-//            return new ResponseEntity<>(postData.get(), HttpStatus.OK);
-//        } else {
-//            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-//        }
-
         return postData.map(post -> new ResponseEntity<>(post, HttpStatus.OK)).orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
@@ -103,17 +97,31 @@ public class PostController {
     }
 
     @GetMapping("/posts/published")
-    public ResponseEntity<List<Post>> getByPublished() {
+    public ResponseEntity<Map<String, Object>> getByPublished(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "3") int size
+    ) {
         try {
-            List<Post> posts = postRepository.findByPublished(true);
-            if (posts.isEmpty()) {
-                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-            } else {
-                return new ResponseEntity<>(posts, HttpStatus.OK);
-            }
+            Pageable paging = PageRequest.of(page - 1, size);
+            Page<Post> pagePosts;
+            pagePosts = postRepository.findByPublished(true, paging);
+            return getMapResponseEntity(pagePosts);
         } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    private ResponseEntity<Map<String, Object>> getMapResponseEntity(Page<Post> pagePosts) {
+        List<Post> posts;
+        posts = pagePosts.getContent();
+        Map<String, Object> response = new HashMap<>();
+        response.put("posts", posts);
+        response.put("currentPage", pagePosts.getNumber() + 1);
+        response.put("totalItems", pagePosts.getTotalElements());
+        response.put("totalPages", pagePosts.getTotalPages());
+        if (posts.isEmpty())
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
 }
