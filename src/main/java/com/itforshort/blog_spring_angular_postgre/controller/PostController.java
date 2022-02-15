@@ -59,7 +59,7 @@ public class PostController {
     public ResponseEntity<Post> createPost(@RequestBody Post post) {
         try {
             Post _post = postRepository
-                    .save(new Post(post.getTitle(), post.getDescription(), false));
+                    .save(new Post(post.getTitle(), post.getDescription(), post.getDetail(), false));
             return new ResponseEntity<>(_post, HttpStatus.CREATED);
         } catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -73,6 +73,7 @@ public class PostController {
             Post _post = postData.get();
             _post.setTitle(post.getTitle());
             _post.setDescription(post.getDescription());
+            _post.setDetail(post.getDetail());
             _post.setPublished(post.isPublished());
 
             return new ResponseEntity<>(postRepository.save(_post), HttpStatus.OK);

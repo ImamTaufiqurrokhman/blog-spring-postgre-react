@@ -15,24 +15,28 @@ public class Post {
     @Column(name = "description")
     private String description;
 
+    @Column(name = "detail")
+    private String detail;
+
     @Column(name = "published")
     private boolean published;
 
-    public Post(String title, String description, boolean published) {
+    public String getDetail() {
+        return detail;
+    }
+
+    public void setDetail(String detail) {
+        this.detail = detail;
+    }
+
+    public Post(String title, String description, String detail, boolean published) {
         this.title = title;
         this.description = description;
+        this.detail = detail;
         this.published = published;
     }
 
     public Post() {}
-
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
-    }
 
     public String getTitle() {
         return title;
