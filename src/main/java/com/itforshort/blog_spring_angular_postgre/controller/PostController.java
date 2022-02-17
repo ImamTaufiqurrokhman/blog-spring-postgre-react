@@ -30,7 +30,7 @@ public class PostController {
     @GetMapping("/posts")
     public ResponseEntity<Map<String, Object>> getAllPosts(
             @RequestParam(required = false) String title,
-            @RequestParam(required = false, defaultValue = "0") int page,
+            @RequestParam(required = false, defaultValue = "1") int page,
             @RequestParam(required = false, defaultValue = "3") int size,
             @RequestParam(required = false, defaultValue = "id") String sort_by,
             @RequestParam(required = false, defaultValue = "desc") String sort_type
