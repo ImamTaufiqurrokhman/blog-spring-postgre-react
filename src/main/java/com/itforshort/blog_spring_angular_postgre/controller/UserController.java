@@ -28,7 +28,7 @@ public class UserController {
             if (name == null)
                 users.addAll(userRepository.findAll());
             else
-                users.addAll(userRepository.findByNameContaining(name));
+                users.addAll(userRepository.findByUsernameContaining(name));
             if (users.isEmpty())
                 return new ResponseEntity<>(HttpStatus.NO_CONTENT);
             return new ResponseEntity<>(users, HttpStatus.OK);
@@ -47,7 +47,7 @@ public class UserController {
     public ResponseEntity<User> createPost(@RequestBody User post) {
         try {
             User _user = userRepository
-                    .save(new User(post.getName(), post.getEmail(), post.getPassword(), false));
+                    .save(new User(post.getUsername(), post.getEmail(), post.getPassword(), false));
             return new ResponseEntity<>(_user, HttpStatus.CREATED);
         } catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -59,7 +59,7 @@ public class UserController {
         Optional<User> userData = userRepository.findById(id);
         if (userData.isPresent()) {
             User _user = userData.get();
-            _user.setName(post.getName());
+            _user.setUsername(post.getUsername());
             _user.setEmail(post.getEmail());
             _user.setActive(post.isActive());
             _user.setPassword(post.getPassword());
@@ -90,18 +90,18 @@ public class UserController {
         }
     }
 
-    @GetMapping("/users/active")
-    public ResponseEntity<List<User>> getByPublished() {
-        try {
-            List<User> users = userRepository.findByActive(true);
-            if (users.isEmpty()) {
-                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-            } else {
-                return new ResponseEntity<>(users, HttpStatus.OK);
-            }
-        } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
+//    @GetMapping("/users/active")
+//    public ResponseEntity<List<User>> getByPublished() {
+//        try {
+//            List<User> users = userRepository.findByActive(true);
+//            if (users.isEmpty()) {
+//                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+//            } else {
+//                return new ResponseEntity<>(users, HttpStatus.OK);
+//            }
+//        } catch (Exception e) {
+//            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+//        }
+//    }
 
 }

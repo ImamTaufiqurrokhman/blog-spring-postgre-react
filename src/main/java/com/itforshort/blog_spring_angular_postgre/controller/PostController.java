@@ -16,6 +16,7 @@ import java.util.*;
 
 //import static javax.swing.text.html.parser.DTDConstants.ID;
 
+//@CrossOrigin(origins = "http://localhost:8081")
 @CrossOrigin(origins = "http://localhost:8081")
 @RestController
 @RequestMapping("/api")
@@ -29,10 +30,10 @@ public class PostController {
     @GetMapping("/posts")
     public ResponseEntity<Map<String, Object>> getAllPosts(
             @RequestParam(required = false) String title,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "3") int size,
-            @RequestParam(defaultValue = "id") String sort_by,
-            @RequestParam(defaultValue = "desc") String sort_type
+            @RequestParam(required = false, defaultValue = "0") int page,
+            @RequestParam(required = false, defaultValue = "3") int size,
+            @RequestParam(required = false, defaultValue = "id") String sort_by,
+            @RequestParam(required = false, defaultValue = "desc") String sort_type
     ) {
         try {
 //            List<Order> orders = new ArrayList<Order>();

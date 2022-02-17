@@ -1,6 +1,11 @@
 package com.itforshort.blog_spring_angular_postgre.model;
 
 import javax.persistence.*;
+import javax.validation.constraints.Email;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Size;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "users")
@@ -9,26 +14,41 @@ public class User {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
 
+    @NotBlank
+    @Size(max = 50)
+    @Email
     @Column(name = "email")
     private String email;
 
-    @Column(name = "name")
-    private String name;
+    @NotBlank
+    @Size(max = 50)
+    @Column(name = "username")
+    private String username;
 
+    @NotBlank
+    @Size(max = 120)
     @Column(name = "password")
     private String password;
 
     @Column(name = "active")
     private boolean active;
 
-    public User(String email, String name, String password, boolean active) {
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "role_user", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))
+    private Set<Role> roles = new HashSet<>();
+
+    public User(String username, String email, String password, boolean active) {
         this.email = email;
-        this.name = name;
+        this.username = username;
         this.password = password;
         this.active = active;
     }
 
     public User() {}
+
+    public long getId() {
+        return id;
+    }
 
     public boolean isActive() {
         return active;
@@ -46,12 +66,12 @@ public class User {
         this.email = email;
     }
 
-    public String getName() {
-        return name;
+    public String getUsername() {
+        return username;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setUsername(String name) {
+        this.username = name;
     }
 
     public String getPassword() {
@@ -62,8 +82,16 @@ public class User {
         this.password = password;
     }
 
+    public Set<Role> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(Set<Role> roles) {
+        this.roles = roles;
+    }
+
     @Override
     public String toString() {
-        return "User [id=" + id + ", email=" + email + ", desc=" + name + ", password=" + password + "]";
+        return "User [id=" + id + ", email=" + email + ", username=" + username + ", password=" + password + "]";
     }
 }
