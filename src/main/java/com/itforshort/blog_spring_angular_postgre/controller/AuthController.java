@@ -1,16 +1,22 @@
 package com.itforshort.blog_spring_angular_postgre.controller;
 
 import com.itforshort.blog_spring_angular_postgre.model.ERole;
+import com.itforshort.blog_spring_angular_postgre.model.RefreshToken;
 import com.itforshort.blog_spring_angular_postgre.model.Role;
 import com.itforshort.blog_spring_angular_postgre.model.User;
 import com.itforshort.blog_spring_angular_postgre.payload.request.LoginRequest;
 import com.itforshort.blog_spring_angular_postgre.payload.request.SignupRequest;
 import com.itforshort.blog_spring_angular_postgre.payload.response.MessageResponse;
 import com.itforshort.blog_spring_angular_postgre.payload.response.UserInfoResponse;
+import com.itforshort.blog_spring_angular_postgre.repository.RefreshTokenRepository;
 import com.itforshort.blog_spring_angular_postgre.repository.RoleRepository;
 import com.itforshort.blog_spring_angular_postgre.repository.UserRepository;
+import com.itforshort.blog_spring_angular_postgre.security.exception.TokenRefreshException;
 import com.itforshort.blog_spring_angular_postgre.security.jwt.JwtUtils;
+import com.itforshort.blog_spring_angular_postgre.security.jwt.RefreshTokenUtils;
 import com.itforshort.blog_spring_angular_postgre.security.services.UserDetailsImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -22,9 +28,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -36,26 +44,34 @@ public class AuthController {
 
     private final UserRepository userRepository;
 
+    private final RefreshTokenRepository refreshTokenRepository;
+
     public RoleRepository roleRepository;
 
     public PasswordEncoder encoder;
 
     public JwtUtils jwtUtils;
 
-//    public AuthController() {}
+    public RefreshTokenUtils tokenUtils;
+
+    private static final Logger logger = LoggerFactory.getLogger(JwtUtils.class);
 
     public AuthController(
             AuthenticationManager authenticationManager,
             UserRepository userRepository,
             RoleRepository roleRepository,
+            RefreshTokenRepository refreshTokenRepository,
             PasswordEncoder encoder,
-            JwtUtils jwtUtils
+            JwtUtils jwtUtils,
+            RefreshTokenUtils tokenUtils
     ) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
+        this.refreshTokenRepository = refreshTokenRepository;
         this.encoder = encoder;
         this.jwtUtils = jwtUtils;
+        this.tokenUtils = tokenUtils;
     }
 
     @PostMapping("/login")
@@ -69,16 +85,18 @@ public class AuthController {
         SecurityContextHolder.getContext().setAuthentication(authentication);
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         ResponseCookie jwtCookie = jwtUtils.generateJwtCookie(userDetails);
+        ResponseCookie newRefreshToken = tokenUtils.createRefreshToken(userDetails.getId());
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList());
-        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, newRefreshToken.toString())
+                .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
                 .body(new UserInfoResponse(
                         userDetails.getId(),
                         userDetails.getUsername(),
                         userDetails.getEmail(),
-                        roles,
-                        jwtUtils.generateTokenFromUsername(userDetails.getUsername())
+                        roles
                 ));
     }
 
@@ -128,9 +146,39 @@ public class AuthController {
         return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
     }
     @PostMapping("/logout")
-    public ResponseEntity<?> logoutUser() {
+    public ResponseEntity<?> logoutUser(HttpServletRequest request) {
+        String _refreshToken = tokenUtils.getRefreshTokenFromCookies(request);
+        Optional<RefreshToken> existedRefreshToken = refreshTokenRepository.findByToken(_refreshToken);
+        existedRefreshToken.ifPresent(refreshToken -> refreshTokenRepository.deleteById(refreshToken.getId()));
         ResponseCookie cookie = jwtUtils.getCleanJwtCookie();
-        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString())
+        ResponseCookie refreshCookie = tokenUtils.cleanRefreshToken();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
             .body(new MessageResponse("You've been signed out!"));
+    }
+
+    @PostMapping("/refresh_token")
+    public ResponseEntity<?> refreshToken(HttpServletRequest request) {
+        String _refreshToken = tokenUtils.getRefreshTokenFromCookies(request);
+        Optional<RefreshToken> existedRefreshToken = refreshTokenRepository.findByToken(_refreshToken);
+        if (existedRefreshToken.isPresent()) {
+            RefreshToken validRefreshToken = tokenUtils.verifyExpiration(existedRefreshToken.get());
+            User user = validRefreshToken.getUser();
+            try {
+                refreshTokenRepository.deleteById(validRefreshToken.getId());
+            } catch (Exception e) {
+                logger.error("Failed to delete: {}", e.getMessage());
+            }
+            ResponseCookie newJwtCookie = jwtUtils.generateJwtCookieFromUser(user);
+            ResponseCookie newRefreshToken = tokenUtils.createRefreshToken(user.getId());
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, newJwtCookie.toString())
+                    .header(HttpHeaders.SET_COOKIE, newRefreshToken.toString())
+                    .body(new MessageResponse("You've been refreshed!"));
+
+        } else {
+            throw new TokenRefreshException(_refreshToken, "Refresh token is invalid. Please login to continue!");
+        }
     }
 }

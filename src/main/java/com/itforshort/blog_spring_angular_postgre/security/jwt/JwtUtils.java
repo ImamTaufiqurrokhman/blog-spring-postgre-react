@@ -1,5 +1,6 @@
 package com.itforshort.blog_spring_angular_postgre.security.jwt;
 
+import com.itforshort.blog_spring_angular_postgre.model.User;
 import com.itforshort.blog_spring_angular_postgre.security.services.UserDetailsImpl;
 import io.jsonwebtoken.*;
 import org.slf4j.Logger;
@@ -19,31 +20,34 @@ import java.util.UUID;
 @Component
 public class JwtUtils {
     private static final Logger logger = LoggerFactory.getLogger(JwtUtils.class);
-//    @Value("${itforshort.app.jwtSecret}")
-//    private String jwtSecret;
-//    @Value("${itforshort.app.jwtCookieName}")
-//    private String jwtCookie;
+    @Value("${itforshort.app.jwtSecret}")
+    private String jwtSecret;
+    @Value("${itforshort.app.jwtCookieName}")
+    private String jwtCookie;
     @Value("${itforshort.app.jwtExpirationMs}")
     private int jwtExpirationMs;
 
-    public String getJwtFromCookies(HttpServletRequest request, HttpServletResponse response) {
+    public String getJwtFromCookies(HttpServletRequest request) {
         Cookie cookie = WebUtils.getCookie(request, "authToken");
         if (cookie != null) {
             return cookie.getValue();
         } else {
-            final String token = UUID.randomUUID().toString();
-            final CookieGenerator g = new CookieGenerator();
-            g.setCookieMaxAge(Integer.MAX_VALUE);
-            g.setCookiePath("/");
-            g.setCookieName("authToken");
-            g.addCookie(response, token);
-            logger.debug("Generated a new token: {}", token);
-            return token;
-    }
+            return UUID.randomUUID().toString();
+        }
     }
 
     public ResponseCookie generateJwtCookie(UserDetailsImpl userPrincipal) {
         String jwt = generateTokenFromUsername(userPrincipal.getUsername());
+        return ResponseCookie
+                .from("authToken", jwt)
+                .path("/api")
+                .maxAge(24 * 60 * 60)
+                .httpOnly(true)
+                .build();
+    }
+
+    public ResponseCookie generateJwtCookieFromUser(User user) {
+        String jwt = generateTokenFromUsername(user.getUsername());
         return ResponseCookie
                 .from("authToken", jwt)
                 .path("/api")
