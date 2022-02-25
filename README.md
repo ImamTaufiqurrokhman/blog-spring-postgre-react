@@ -1,2 +1,2 @@
-# blog-spring-angular-postgre
-A blog app built with Spring, PostgreSQL and Angular
+# blog-spring-postgre-react
+A blog app built with Spring, PostgreSQL and React
